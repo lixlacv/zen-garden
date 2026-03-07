@@ -1,0 +1,12 @@
+# Visual Studio
+.vscode/
+*.code-workspace
+.vs/
+node_modules/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.log

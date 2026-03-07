@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Garden</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav id="ui-panel">
+        <header>
+            <h3>Zen Garden</h3>
+        </header>
+
+        <section class="tool-section">
+            <p class="label">Інструменти</p>
+            <button id="rakeTool" onclick="setTool('rake')">Граблі</button>
+            <button id="stoneTool" onclick="setTool('stone')">Каміння</button>
+            <button id="treeTool" onclick="setTool('tree')">Сакура</button>
+        </section>
+
+        <div class="divider"></div>
+
+        <section class="tool-section">
+            <p class="label">Розмір пензля</p>
+            <input type="range" id="brushSize" min="10" max="60" value="30">
+        </section>
+
+        <div class="divider"></div>
+
+        <section class="tool-section">
+            <button id="musicBtn">Музика: Викл</button>
+            <button id="clearBtn" class="danger">Очистити все</button>
+        </section>
+
+        <audio id="bgMusic" src="assets/zen-music.mp3" loop></audio>
+    </nav>
+
+    <canvas id="sandCanvas"></canvas>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
