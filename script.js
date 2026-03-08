@@ -14,6 +14,7 @@ let currentTool = 'rake';
 let lastX = 0;
 let lastY = 0;
 let obstacles = []; // Тут зберігаємо і камені, і дерева
+window.obstacles = obstacles; // Додайте цей рядок, щоб Cypress його бачив
 
 // Ініціалізація піску
 function initSand() {
@@ -124,6 +125,7 @@ musicBtn.addEventListener('click', () => {
 // Очищення
 clearBtn.addEventListener('click', () => {
     obstacles = [];
+    window.obstacles = obstacles;
     initSand();
 });
 
@@ -133,3 +135,15 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
     initSand(); // При зміні розміру пісок оновиться
 });
+
+// Експорт для Jest (не заважає роботі в браузері)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        initSand,
+        isTooCloseToObstacle,
+        getObstacles: () => obstacles,
+        setObstacles: (val) => { obstacles = val; },
+        getCurrentTool: () => currentTool,
+        setTool: window.setTool
+    };
+}
