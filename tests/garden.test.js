@@ -46,6 +46,7 @@ describe('Zen Garden: Direct Script Tests', () => {
     return import('../script.js').then((module) => {
         garden = module.default || module;
     });
+});
 
   test('initSand should run without errors', () => {
     expect(() => garden.initSand()).not.toThrow();
