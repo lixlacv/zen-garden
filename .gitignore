@@ -3,6 +3,7 @@
 *.code-workspace
 .vs/
 node_modules/
+dist/
 
 # System Files
 .DS_Store
@@ -11,6 +12,7 @@ cypress/videos/
 cypress/screenshots/
 .nyc_output/
 coverage/
+.env
 
 # Temp files
 *.log
