@@ -41,4 +41,4 @@ jobs:
 
       # 6. Додатковий крок для демонстрації використання секретів
       - name: Security Check
-        run: echo "Мій секретний ключ це ${{ secrets.MY_PROJECT_API_KEY }}"
+        run: echo "My secret key - ${{ secrets.MY_PROJECT_API_KEY }}"
