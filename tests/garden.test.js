@@ -42,10 +42,10 @@ describe('Zen Garden: Direct Script Tests', () => {
 
     // 4. Очищення кешу модулів та завантаження скрипту
     vi.resetModules();
-    const importedModule = require('../script.js');
-    // Якщо ви використовуєте ES-експорти, garden буде в .default, якщо ні - то весь об'єкт
-    garden = importedModule.default || importedModule;
-  });
+    // Використовуємо динамічний import, який краще працює з Vite-проєктами
+    return import('../script.js').then((module) => {
+        garden = module.default || module;
+    });
 
   test('initSand should run without errors', () => {
     expect(() => garden.initSand()).not.toThrow();

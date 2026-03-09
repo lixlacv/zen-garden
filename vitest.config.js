@@ -4,10 +4,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    // Цей блок каже Vitest імітувати змінні оточення Vite
-    setupFiles: [],
-    env: {
-      VITE_APP_STATUS: 'Testing',
-    },
+    setupFiles: ['./vitest.setup.js'], // Це завантажить змінні ПЕРЕД тестами
   },
 });
