@@ -34,4 +34,4 @@ jobs:
 
       # 5. Запуск тестів
       - name: Run Tests
-        run: npm run test:unit
+        run: npm run test
