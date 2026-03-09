@@ -1,6 +1,7 @@
 ﻿/**
  * Zen Garden - Професійна логіка малювання з адаптивним розміром ліній
  */
+
 const canvas = document.getElementById('sandCanvas');
 const ctx = canvas.getContext('2d');
 const brushSlider = document.getElementById('brushSize');
@@ -148,7 +149,7 @@ window.setTool('rake');
   // State
   let lastMouseX = 0;
   let lastMouseY = 0;
-  let lastMoveTime = 0;
+  let lastMoveTime = 0; // eslint-disable-next-line no-unused-vars
   let angle = 0; 
   let scale = Math.max(0.6, parseInt(brushSlider.value || 30) / 30);
   let isOverCanvas = false;
