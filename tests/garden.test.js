@@ -2,14 +2,19 @@
  * @vitest-environment jsdom
  */
 
-// 1. Імпортуємо 'test' та замінюємо 'jest' на 'vi'
 import { describe, expect, beforeEach, test, vi } from 'vitest';
 
 describe('Zen Garden: Direct Script Tests', () => {
   let garden;
 
   beforeEach(() => {
-    // 1. Готуємо HTML
+    // 1. Створюємо глобальну заглушку для Vite-змінних оточення
+    // Це вирішує помилку "Cannot read properties of undefined (reading 'VITE_APP_STATUS')"
+    if (typeof global.import === 'undefined') {
+        global.import = { meta: { env: { VITE_APP_STATUS: 'testing' } } };
+    }
+
+    // 2. Готуємо HTML
     document.body.innerHTML = `
             <canvas id="sandCanvas"></canvas>
             <input type="range" id="brushSize" value="30" />
@@ -20,7 +25,7 @@ describe('Zen Garden: Direct Script Tests', () => {
             <button id="stoneTool"></button>
         `;
 
-    // 2. Фейковий CANVAS (замінюємо jest.fn на vi.fn)
+    // 3. Фейковий CANVAS для середовища тестування
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
       fillRect: vi.fn(),
       beginPath: vi.fn(),
@@ -35,10 +40,11 @@ describe('Zen Garden: Direct Script Tests', () => {
       clearRect: vi.fn(),
     }));
 
-    // 3. Скидаємо модулі (vi.resetModules замість jest)
+    // 4. Очищення кешу модулів та завантаження скрипту
     vi.resetModules();
-    // Використовуємо динамічний імпорт або require, якщо налаштовано
-    garden = require('../script.js');
+    const importedModule = require('../script.js');
+    // Якщо ви використовуєте ES-експорти, garden буде в .default, якщо ні - то весь об'єкт
+    garden = importedModule.default || importedModule;
   });
 
   test('initSand should run without errors', () => {
@@ -46,7 +52,6 @@ describe('Zen Garden: Direct Script Tests', () => {
   });
 
   test('setTool should change current tool to stone', () => {
-    // Якщо setTool прикріплений до window у вашому script.js
     window.setTool('stone');
     expect(garden.getCurrentTool()).toBe('stone');
   });
