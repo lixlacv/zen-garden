@@ -3,7 +3,7 @@
  */
 
 // 1. Імпортуємо 'test' та замінюємо 'jest' на 'vi'
-import { describe, it, expect, beforeEach, test, vi } from 'vitest';
+import { describe, expect, beforeEach, test, vi } from 'vitest';
 
 describe('Zen Garden: Direct Script Tests', () => {
   let garden;
