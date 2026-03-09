@@ -38,7 +38,3 @@ jobs:
         env:
           # Ми беремо секрет із "сейфа" GitHub і даємо йому ім'я для тестів
           MY_API_KEY: ${{ secrets.MY_PROJECT_API_KEY }}
-
-      # 6. Додатковий крок для демонстрації використання секретів
-      - name: Security Check
-        run: echo "My secret key - ${{ secrets.MY_PROJECT_API_KEY }}"
