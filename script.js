@@ -165,7 +165,6 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-const testError = 1;
 // Зчитуємо змінну з оточення
 const status = import.meta.env.VITE_APP_STATUS;
 const bgColor = import.meta.env.VITE_BG_COLOR;
