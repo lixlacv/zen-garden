@@ -72,15 +72,26 @@ export function initDOMBindings() {
     });
   }
 
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      obstacles.length = 0;
-      pts = [];
-      lastX = 0; lastY = 0; lastTime = 0;
-      skipInitial = false;
-      if (typeof initSand === 'function') initSand();
-    });
-  }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+        clearObstacles();
+     });
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    initSand,
+    isTooCloseToObstacle,
+    getObstacles: () => obstacles,
+    setObstacles: (val) => { obstacles = val; },
+    getCurrentTool: () => currentTool,
+    setTool: window.setTool,
+    initDOMBindings,
+    clearObstacles, // додано
+  };
+}
+
+
 
   // Resize binding (safe)
   window.addEventListener('resize', () => {
@@ -490,6 +501,22 @@ function addTree(x, y) {
   obstacles.push({ x, y, size, type: 'tree' });
   drawObstacle(obstacles[obstacles.length - 1]);
 }
+
+export function clearObstacles() {
+  // Очищаємо масив, зберігаючи ту саму референцію
+  obstacles.length = 0;
+
+  // Скидаємо допоміжні буфери
+  pts = [];
+  lastX = 0;
+  lastY = 0;
+  lastTime = 0;
+  skipInitial = false;
+
+  // Перемалювати полотно, якщо є контекст
+  if (typeof initSand === 'function') initSand();
+}
+
 
 function drawObstacle(obj) {
   if (!ctx) return;
