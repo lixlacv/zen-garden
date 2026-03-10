@@ -2,18 +2,100 @@
  * Zen Garden - Професійна логіка малювання з адаптивним розміром ліній
  */
 
-const canvas = document.getElementById('sandCanvas');
-const ctx = canvas.getContext('2d');
-const brushSlider = document.getElementById('brushSize');
-const musicBtn = document.getElementById('musicBtn');
-const bgMusic = document.getElementById('bgMusic');
-const clearBtn = document.getElementById('clearBtn');
-const rakeToolBtn = document.getElementById('rakeTool');
-const stoneToolBtn = document.getElementById('stoneTool');
-const treeToolBtn = document.getElementById('treeTool');
+/* DOM-посилання ініціалізуються в initDOMBindings */
+let canvas = null;
+let ctx = null;
+let brushSlider = null;
+let musicBtn = null;
+let bgMusic = null;
+let clearBtn = null;
+let rakeToolBtn = null;
+let stoneToolBtn = null;
+let treeToolBtn = null;
 
-// Налаштування полотна
+/**
+ * Ініціалізація DOM-зв'язків і слухачів.
+ * Викликайте після того, як потрібні елементи додані в document (наприклад у тестах).
+ */
+export function initDOMBindings() {
+  canvas = document.getElementById('sandCanvas');
+  ctx = canvas ? canvas.getContext('2d') : null;
+  brushSlider = document.getElementById('brushSize');
+  musicBtn = document.getElementById('musicBtn');
+  bgMusic = document.getElementById('bgMusic');
+  clearBtn = document.getElementById('clearBtn');
+  rakeToolBtn = document.getElementById('rakeTool');
+  stoneToolBtn = document.getElementById('stoneTool');
+  treeToolBtn = document.getElementById('treeTool');
+
+  // Безпечні прив'язки: перевіряємо наявність елементів перед викликом
+  if (rakeToolBtn) rakeToolBtn.addEventListener('click', () => window.setTool('rake'));
+  if (stoneToolBtn) stoneToolBtn.addEventListener('click', () => window.setTool('stone'));
+  if (treeToolBtn) treeToolBtn.addEventListener('click', () => window.setTool('tree'));
+
+  // Make rake active on first page load (тільки якщо setTool доступний)
+  if (typeof window.setTool === 'function') window.setTool('rake');
+
+  // Ініціалізуємо кастомний курсор (створюється лише якщо canvas існує)
+  if (canvas && brushSlider) createRakeCursor();
+
+  // Canvas mouse handlers (тільки якщо canvas існує)
+  if (canvas) {
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastTime = performance.now();
+      skipInitial = false;
+      pts = [{ x: lastX, y: lastY }];
+      if (currentTool === 'stone') addStone(e.clientX, e.clientY);
+      if (currentTool === 'tree') addTree(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing || currentTool !== 'rake') return;
+      drawRake(e.clientX, e.clientY);
+    });
+  }
+
+  // Global handlers
+  window.addEventListener('mouseup', () => (isDrawing = false));
+  if (musicBtn && bgMusic) {
+    musicBtn.addEventListener('click', () => {
+      if (bgMusic.paused) {
+        bgMusic.play().catch(() => {});
+        musicBtn.innerText = '🎵 Музика: Вкл';
+      } else {
+        bgMusic.pause();
+        musicBtn.innerText = '🎵 Музика: Викл';
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      obstacles.length = 0;
+      pts = [];
+      lastX = 0; lastY = 0; lastTime = 0;
+      skipInitial = false;
+      if (typeof initSand === 'function') initSand();
+    });
+  }
+
+  // Resize binding (safe)
+  window.addEventListener('resize', () => {
+    if (typeof resize === 'function') resize();
+  });
+
+  // Update music label on load if elements exist
+  if (musicBtn) updateMusicButtonLabel();
+}
+
+/* --- Кінець initDOMBindings --- */
+
+/* Налаштування полотна */
 function resize() {
+  if (!canvas) return;
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   initSand();
@@ -22,7 +104,7 @@ function resize() {
 let isDrawing = false;
 let currentTool = 'rake';
 let lastX = 0;
-let lastY = 0;                                                                          
+let lastY = 0;
 let lastTime = 0;
 let velocity = 0;
 const PAUSE_SKIP_MS = 120; // If pointer was idle longer than this, skip the first stroke segment to avoid a start "blob"
@@ -36,7 +118,8 @@ let pts = [];
 /**
  * ГЕНЕРАЦІЯ ЗЕРНИСТОГО ПІСКУ (ЯК НА РЕФЕРЕНСІ)
  */
-function initSand() {
+export function initSand() {
+  if (!ctx || !canvas) return;
   const sandBase = '#f2ece0';
   ctx.fillStyle = sandBase;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -80,23 +163,18 @@ window.setTool = function (tool) {
   if (cursorCanvas) {
     if (currentTool !== 'rake') {
       cursorCanvas.style.display = 'none';
-      canvas.style.cursor = 'default';
+      if (canvas) canvas.style.cursor = 'default';
     }
   }
 };
 
-rakeToolBtn.addEventListener('click', () => window.setTool('rake'));
-stoneToolBtn.addEventListener('click', () => window.setTool('stone'));
-treeToolBtn.addEventListener('click', () => window.setTool('tree'));
+/* --- Custom rake cursor overlay (перетворено на функцію) --- */
+function createRakeCursor() {
+  if (!canvas || !brushSlider) return;
 
-// Make rake active on first page load
-window.setTool('rake');
-
-// --- Custom rake cursor overlay ---
-(function createRakeCursor() {
   const CURSOR_PX = 64;
-  if (document.getElementById('rakeCursorCanvas')) return; 
-  
+  if (document.getElementById('rakeCursorCanvas')) return;
+
   const cursorCanvas = document.createElement('canvas');
   cursorCanvas.id = 'rakeCursorCanvas';
   const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -151,7 +229,7 @@ window.setTool('rake');
   let lastMouseY = 0;
   // eslint-disable-next-line no-unused-vars
   let lastMoveTime = 0;
-  let angle = 0; 
+  let angle = 0;
   let scale = Math.max(0.6, parseInt(brushSlider.value || 30) / 30);
   let isOverCanvas = false;
 
@@ -169,17 +247,17 @@ window.setTool('rake');
     // Якщо миша не над полотном або вибрано не граблі — ховаємо кастомний курсор
     if (!isOverCanvas || currentTool !== 'rake') {
       cursorCanvas.style.display = 'none';
-      if (isOverCanvas) canvas.style.cursor = 'default';
+      if (isOverCanvas && canvas) canvas.style.cursor = 'default';
       return;
     }
 
     cursorCanvas.style.display = '';
-    canvas.style.cursor = 'none';
+    if (canvas) canvas.style.cursor = 'none';
 
     const now = performance.now();
     const dx = x - lastMouseX;
     const dy = y - lastMouseY;
-    
+
     if (Math.hypot(dx, dy) > 1) {
       angle = Math.atan2(dy, dx) + Math.PI;
     }
@@ -196,24 +274,26 @@ window.setTool('rake');
     isOverCanvas = true;
     if (currentTool === 'rake') {
       cursorCanvas.style.display = '';
-      canvas.style.cursor = 'none';
+      if (canvas) canvas.style.cursor = 'none';
     } else {
       cursorCanvas.style.display = 'none';
-      canvas.style.cursor = 'default';
+      if (canvas) canvas.style.cursor = 'default';
     }
   }
-  
+
   function onLeave() {
     isOverCanvas = false;
     cursorCanvas.style.display = 'none';
-    canvas.style.cursor = 'default';
+    if (canvas) canvas.style.cursor = 'default';
   }
 
   canvas.addEventListener('mouseenter', onEnter);
   canvas.addEventListener('mouseleave', onLeave);
   document.addEventListener('mousemove', onMove);
   window.addEventListener('blur', onLeave);
-})();
+}
+
+/* --- Кінець кастомного курсора --- */
 
 /**
  * Obstacle collision helpers
@@ -247,11 +327,11 @@ function obstacleCollisionPoint(obj, x, y, pad = 3) {
   const dx = obj.x - x;
   const dy = obj.y - y;
   // Reduced padding for stones to allow rake lines to get closer
-  const r = obj.size + pad; 
+  const r = obj.size + pad;
   return dx * dx + dy * dy <= r * r;
 }
 
-function isTooCloseToObstacle(x, y, margin = 10) {
+export function isTooCloseToObstacle(x, y, margin = 10) {
   return obstacles.some((obj) => obstacleCollisionPoint(obj, x, y, margin));
 }
 
@@ -294,7 +374,7 @@ function drawRake(x, y) {
 
   pts.push({ x, y });
 
-  const rakeWidth = parseInt(brushSlider.value);
+  const rakeWidth = parseInt((brushSlider && brushSlider.value) || 30);
   const baseLW = Math.max(0.5, rakeWidth / (18 * (0.9 + velocity * 0.5)));
   if (skipInitial) {
     if (distance < baseLW * 1.2) {
@@ -331,18 +411,21 @@ function drawRake(x, y) {
   if (Math.hypot(mx2.x - mx1.x, mx2.y - mx1.y) > baseLW * 0.6) {
     // FIX: Only erase if the path doesn't hit an obstacle (reduced margin to 1)
     if (!quadIntersectsAnyObstacle(mx1, p1, mx2, 1, 10)) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.strokeStyle = `rgba(0,0,0,${Math.min(0.18, 0.06 + (1 - speedFactor) * 0.14)})`;
-      ctx.lineWidth = baseLW * 1.8;
-      ctx.beginPath();
-      ctx.moveTo(mx1.x, mx1.y);
-      ctx.quadraticCurveTo(p1.x, p1.y, mx2.x, mx2.y);
-      ctx.stroke();
-      ctx.restore();
+      if (ctx) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = `rgba(0,0,0,${Math.min(0.18, 0.06 + (1 - speedFactor) * 0.14)})`;
+        ctx.lineWidth = baseLW * 1.8;
+        ctx.beginPath();
+        ctx.moveTo(mx1.x, mx1.y);
+        ctx.quadraticCurveTo(p1.x, p1.y, mx2.x, mx2.y);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
+  if (!ctx) return;
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -397,18 +480,19 @@ function drawRake(x, y) {
 }
 
 function addStone(x, y) {
-  const size = Math.max(15, parseInt(brushSlider.value) * 0.7);
+  const size = Math.max(15, parseInt((brushSlider && brushSlider.value) || 30) * 0.7);
   obstacles.push({ x, y, size, type: 'stone' });
   drawObstacle(obstacles[obstacles.length - 1]);
 }
 
 function addTree(x, y) {
-  const size = Math.max(20, parseInt(brushSlider.value));
+  const size = Math.max(20, parseInt((brushSlider && brushSlider.value) || 30));
   obstacles.push({ x, y, size, type: 'tree' });
   drawObstacle(obstacles[obstacles.length - 1]);
 }
 
 function drawObstacle(obj) {
+  if (!ctx) return;
   ctx.save();
   if (obj.type === 'stone') {
     ctx.shadowBlur = 12;
@@ -436,53 +520,25 @@ function drawObstacle(obj) {
   ctx.restore();
 }
 
-canvas.addEventListener('mousedown', (e) => {
-  isDrawing = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
-  lastTime = performance.now();
-  skipInitial = false;
-  pts = [{ x: lastX, y: lastY }];
-  if (currentTool === 'stone') addStone(e.clientX, e.clientY);
-  if (currentTool === 'tree') addTree(e.clientX, e.clientY);
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (!isDrawing || currentTool !== 'rake') return;
-  drawRake(e.clientX, e.clientY);
-});
-
-window.addEventListener('mouseup', () => (isDrawing = false));
-
-musicBtn.addEventListener('click', () => {
-  if (bgMusic.paused) {
-    bgMusic.play().catch(() => {});
-    musicBtn.innerText = '🎵 Музика: Вкл';
-  } else {
-    bgMusic.pause();
-    musicBtn.innerText = '🎵 Музика: Викл';
+/* Обробники resize/load для реального застосунку */
+window.addEventListener('load', () => {
+  // Викликаємо resize та ініціалізацію DOM, якщо елементи вже в документі
+  if (!canvas) {
+    // Якщо елементи ще не створені, initDOMBindings має бути викликаний зовні (наприклад у тестах)
+    initDOMBindings();
   }
+  resize();
+  updateMusicButtonLabel();
 });
 
-clearBtn.addEventListener('click', () => {
-  obstacles.length = 0;
-  pts = [];
-  lastX = 0; lastY = 0; lastTime = 0;
-  skipInitial = false;
-  initSand();
-});
-
-window.addEventListener('resize', resize);
-window.onload = resize;
-
+/* Оновлення підпису кнопки музики */
 function updateMusicButtonLabel() {
   if (!musicBtn) return;
   const isPlaying = !!(bgMusic && !bgMusic.paused);
   musicBtn.innerText = isPlaying ? '🎵 Музика: Вкл' : '🎵 Музика: Викл';
 }
-updateMusicButtonLabel();
-window.addEventListener('load', updateMusicButtonLabel);
 
+/* Експортуємо корисні функції для тестів / модульності */
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     initSand,
@@ -491,9 +547,10 @@ if (typeof module !== 'undefined' && module.exports) {
     setObstacles: (val) => { obstacles = val; },
     getCurrentTool: () => currentTool,
     setTool: window.setTool,
+    initDOMBindings,
   };
 }
 
-const appStatus = import.meta.env?.VITE_APP_STATUS || 'dev';
-const statusElement = document.getElementById('app-status');
+const appStatus = import.meta?.env?.VITE_APP_STATUS || 'dev';
+const statusElement = typeof document !== 'undefined' ? document.getElementById('app-status') : null;
 if (statusElement) statusElement.innerText = appStatus;
