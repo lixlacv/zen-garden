@@ -72,26 +72,25 @@ export function initDOMBindings() {
     });
   }
 
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-        clearObstacles();
-     });
-    }
-
-    if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    initSand,
-    isTooCloseToObstacle,
-    getObstacles: () => obstacles,
-    setObstacles: (val) => { obstacles = val; },
-    getCurrentTool: () => currentTool,
-    setTool: window.setTool,
-    initDOMBindings,
-    clearObstacles, // додано
+  // Надійне прив'язування кнопки очищення:
+if (clearBtn) {
+  const handler = (ev) => {
+    if (ev) ev.preventDefault(); // Додаємо безпеку
+    clearObstacles();
   };
+  clearBtn.addEventListener('click', handler);
 }
 
-
+  // Делегований обробник (додається лише один раз)
+  if (!initDOMBindings._delegationAdded) {
+    document.addEventListener('click', (ev) => {
+      const t = ev && ev.target;
+      if (t && t.id === 'clearBtn') {
+        clearObstacles();
+      }
+    });
+    initDOMBindings._delegationAdded = true;
+  }
 
   // Resize binding (safe)
   window.addEventListener('resize', () => {
@@ -248,7 +247,7 @@ function createRakeCursor() {
     const b = parseInt(brushSlider.value || 30);
     scale = Math.max(0.5, Math.min(2.0, b / 30));
   }
-  brushSlider.addEventListener('input', updateScaleFromSlider);
+  if (brushSlider) brushSlider.addEventListener('input', updateScaleFromSlider);
   updateScaleFromSlider();
 
   function onMove(e) {
@@ -517,7 +516,6 @@ export function clearObstacles() {
   if (typeof initSand === 'function') initSand();
 }
 
-
 function drawObstacle(obj) {
   if (!ctx) return;
   ctx.save();
@@ -565,16 +563,20 @@ function updateMusicButtonLabel() {
   musicBtn.innerText = isPlaying ? '🎵 Музика: Вкл' : '🎵 Музика: Викл';
 }
 
-/* Експортуємо корисні функції для тестів / модульності */
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     initSand,
     isTooCloseToObstacle,
     getObstacles: () => obstacles,
-    setObstacles: (val) => { obstacles = val; },
+    setObstacles: (val) => {
+      // Мутуємо існуючий масив, щоб усі посилання бачили зміни
+      obstacles.length = 0;
+      if (Array.isArray(val) && val.length) obstacles.push(...val);
+    },
     getCurrentTool: () => currentTool,
     setTool: window.setTool,
     initDOMBindings,
+    clearObstacles,
   };
 }
 
