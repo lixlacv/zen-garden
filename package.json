@@ -30,5 +30,9 @@
       "script.js",
       "!node_modules/**"
     ]
+  },
+  "dependencies": {
+    "@sentry/browser": "^10.45.0",
+    "posthog-js": "^1.363.1"
   }
 }

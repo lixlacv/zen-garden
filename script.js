@@ -13,6 +13,23 @@ let rakeToolBtn = null;
 let stoneToolBtn = null;
 let treeToolBtn = null;
 
+/* Auth DOM */
+let loginBtn = null;
+let registerBtn = null;
+let logoutBtn = null;
+let authStatus = null;
+let authModal = null;
+let authBackdrop = null;
+let authCloseBtn = null;
+let authForm = null;
+let authModeInput = null;
+let authEmail = null;
+let authName = null;
+let authPassword = null;
+let authSwitch = null;
+let authMessage = null;
+let authSubmit = null; // added: submit button reference
+
 /**
  * Ініціалізація DOM-зв'язків і слухачів.
  * Викликайте після того, як потрібні елементи додані в document (наприклад у тестах).
@@ -27,6 +44,23 @@ export function initDOMBindings() {
   rakeToolBtn = document.getElementById('rakeTool');
   stoneToolBtn = document.getElementById('stoneTool');
   treeToolBtn = document.getElementById('treeTool');
+
+  // Auth DOM bindings
+  loginBtn = document.getElementById('loginBtn');
+  registerBtn = document.getElementById('registerBtn');
+  logoutBtn = document.getElementById('logoutBtn');
+  authStatus = document.getElementById('authStatus');
+  authModal = document.getElementById('authModal');
+  authBackdrop = document.getElementById('authBackdrop');
+  authCloseBtn = document.getElementById('authCloseBtn');
+  authForm = document.getElementById('authForm');
+  authModeInput = document.getElementById('authMode');
+  authEmail = document.getElementById('authEmail');
+  authName = document.getElementById('authName');
+  authPassword = document.getElementById('authPassword');
+  authSwitch = document.getElementById('authSwitch');
+  authMessage = document.getElementById('authMessage');
+  authSubmit = document.getElementById('authSubmit'); // added assignment
 
   // Безпечні прив'язки: перевіряємо наявність елементів перед викликом
   if (rakeToolBtn) rakeToolBtn.addEventListener('click', () => window.setTool('rake'));
@@ -58,6 +92,70 @@ export function initDOMBindings() {
     });
   }
 
+  // Auth UI handlers
+  if (loginBtn) loginBtn.addEventListener('click', () => showAuthModal('login'));
+  if (registerBtn) registerBtn.addEventListener('click', () => showAuthModal('register'));
+  if (logoutBtn) logoutBtn.addEventListener('click', () => {
+    logoutUser();
+    posthog?.capture?.('user_logged_out');
+    updateAuthUI();
+  });
+  if (authBackdrop) authBackdrop.addEventListener('click', closeAuthModal);
+  if (authCloseBtn) authCloseBtn.addEventListener('click', closeAuthModal);
+
+  if (authSwitch) {
+    authSwitch.addEventListener('click', () => {
+      const mode = (authModeInput && authModeInput.value) === 'login' ? 'register' : 'login';
+      setAuthMode(mode);
+    });
+  }
+
+  if (authForm) {
+    authForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      authMessage.innerText = '';
+      const mode = authModeInput.value;
+      const email = (authEmail.value || '').trim().toLowerCase();
+      const name = (authName.value || '').trim();
+      const password = authPassword.value || '';
+
+      if (!email || !password) {
+        authMessage.innerText = 'Будь ласка, заповніть email і пароль.';
+        return;
+      }
+
+      try {
+        if (mode === 'register') {
+          const user = await registerUser({ email, name, password });
+          // Set Sentry user context after successful registration
+          Sentry?.setUser?.({
+            id: user.id,           // numeric id now
+            email: user.email,
+            segment: 'standard_user'
+          });
+          posthog?.capture?.('user_registered', { email });
+          Sentry?.captureMessage?.('User registered', { level: 'info' });
+          closeAuthModal();
+        } else {
+          const user = await loginUser({ email, password });
+          // Set Sentry user context after successful login
+          Sentry?.setUser?.({
+            id: user.id,           // numeric id now
+            email: user.email,
+            segment: 'standard_user'
+          });
+          posthog?.capture?.('user_logged_in', { email });
+          Sentry?.captureMessage?.('User logged in', { level: 'info' });
+          closeAuthModal();
+        }
+        updateAuthUI();
+      } catch (err) {
+        authMessage.innerText = err.message || 'Помилка автентифікації';
+        Sentry?.captureException?.(err);
+      }
+    });
+  }
+
   // Global handlers
   window.addEventListener('mouseup', () => (isDrawing = false));
   if (musicBtn && bgMusic) {
@@ -65,21 +163,49 @@ export function initDOMBindings() {
       if (bgMusic.paused) {
         bgMusic.play().catch(() => {});
         musicBtn.innerText = '🎵 Музика: Вкл';
+
+        // Відстежуємо увімкнення музики
+      posthog.capture('music_toggled', { 
+        action: 'play',
+        status: 'on' 
+      });
+
       } else {
         bgMusic.pause();
         musicBtn.innerText = '🎵 Музика: Викл';
+
+        // Відстежуємо вимкнення музики
+      posthog.capture('music_toggled', { 
+        action: 'pause',
+        status: 'off' 
+      });
+
       }
     });
   }
 
-  // Надійне прив'язування кнопки очищення:
-if (clearBtn) {
-  const handler = (ev) => {
-    if (ev) ev.preventDefault(); // Додаємо безпеку
-    clearObstacles();
-  };
-  clearBtn.addEventListener('click', handler);
+const breakBtn = document.getElementById('breakBtn');
+
+if (breakBtn) {
+  breakBtn.addEventListener('click', () => {
+    Sentry?.captureMessage?.("Simulating critical error...");
+
+    // 1. Спочатку показуємо повідомлення користувачу
+    alert("Зараз буде згенеровано помилку для Sentry!");
+
+    // 2. Потім викидаємо помилку, яку перехопить Sentry
+    throw new Error("Sentry Test Error: Something went wrong!");
+  });
 }
+
+  // Надійне прив'язання кнопки очищення:
+  if (clearBtn) {
+    const handler = (ev) => {
+      if (ev) ev.preventDefault(); // Додаємо безпеку
+      clearObstacles();
+    };
+    clearBtn.addEventListener('click', handler);
+  }
 
   // Делегований обробник (додається лише один раз)
   if (!initDOMBindings._delegationAdded) {
@@ -99,6 +225,29 @@ if (clearBtn) {
 
   // Update music label on load if elements exist
   if (musicBtn) updateMusicButtonLabel();
+
+  // Ensure auth UI reflects current state on init
+  updateAuthUI();
+
+  // Custom email validation message
+  if (authEmail) {
+    // Clear custom message when user types
+    authEmail.addEventListener('input', () => authEmail.setCustomValidity(''));
+
+    // Provide custom text instead of browser's native "include @..." message
+    authEmail.addEventListener('invalid', () => {
+      if (!authEmail.value) {
+        authEmail.setCustomValidity('Будь ласка, введіть email.');
+      } else {
+        authEmail.setCustomValidity('Введіть пошту у форматі user@email.com');
+      }
+    });
+
+    // Optional: show message immediately on blur if field invalid
+    authEmail.addEventListener('blur', () => {
+      if (!authEmail.checkValidity()) authEmail.reportValidity();
+    });
+  }
 }
 
 /* --- Кінець initDOMBindings --- */
@@ -124,6 +273,142 @@ window.obstacles = obstacles;
 
 // Points buffer for midpoint smoothing
 let pts = [];
+
+/* ---------------------------
+   Simple client-only auth
+   - stores users in localStorage under "zg_users"
+   - current user email stored under "zg_currentUser"
+   - uses SHA-256 for password hashing via Web Crypto
+ --------------------------- */
+
+function getUsers() {
+  try {
+    const raw = localStorage.getItem('zg_users');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+function saveUsers(arr) {
+  localStorage.setItem('zg_users', JSON.stringify(arr || []));
+}
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem('zg_currentUser') || 'null');
+  } catch {
+    return null;
+  }
+}
+function setCurrentUser(userObj) {
+  localStorage.setItem('zg_currentUser', JSON.stringify(userObj || null));
+}
+
+async function hashPassword(password) {
+  const enc = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', enc);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Replace existing registerUser with this
+async function registerUser({ email, name = '', password }) {
+  const users = getUsers();
+  if (users.find(u => u.email === email)) {
+    throw new Error('Користувач з таким email вже існує.');
+  }
+  const pwdHash = await hashPassword(password);
+  const id = getNextUserId();
+  const user = { id, email, name, pwdHash, createdAt: new Date().toISOString() };
+  users.push(user);
+  saveUsers(users);
+
+  // persist current user including numeric id
+  setCurrentUser({ id: user.id, email: user.email, name: user.name });
+
+  return user;
+}
+
+// Replace existing loginUser with this
+async function loginUser({ email, password }) {
+  const users = getUsers();
+  const user = users.find(u => u.email === email);
+  if (!user) throw new Error('Користувача не знайдено.');
+  const pwdHash = await hashPassword(password);
+  if (pwdHash !== user.pwdHash) throw new Error('Невірний пароль.');
+
+  // If this user record was created before ids existed, assign one now (migration)
+  if (!user.id) {
+    user.id = getNextUserId();
+    saveUsers(users); // persist migration
+  }
+
+  // persist current user including numeric id
+  setCurrentUser({ id: user.id, email: user.email, name: user.name || '' });
+  return user;
+}
+
+function logoutUser() {
+  setCurrentUser(null);
+  // Clear Sentry user context on logout to avoid cross-session leakage
+  try {
+    Sentry?.setUser?.(null);
+  } catch {
+    // ignore if Sentry not available
+  }
+}
+
+// Add near getUsers/saveUsers
+function getNextUserId() {
+  const users = getUsers();
+  // find max numeric id, fallback 0
+  let max = 0;
+  for (const u of users) {
+    const n = Number(u.id);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  return max + 1;
+}
+
+/* UI helpers for auth modal */
+function showAuthModal(mode = 'login') {
+  if (!authModal) return;
+  setAuthMode(mode);
+  authModal.style.display = '';
+  document.body.style.overflow = 'hidden';
+}
+function closeAuthModal() {
+  if (!authModal) return;
+  authModal.style.display = 'none';
+  document.body.style.overflow = '';
+  authForm && authForm.reset();
+  authMessage && (authMessage.innerText = '');
+}
+function setAuthMode(mode) {
+  if (!authModeInput) return;
+  authModeInput.value = mode;
+  const isRegister = mode === 'register';
+  const title = isRegister ? 'Реєстрація' : 'Вхід';
+  document.getElementById('authTitle').innerText = title;
+  authForm.querySelector('#nameRow').style.display = isRegister ? '' : 'none';
+  authSwitch.innerText = isRegister ? 'Перейти до входу' : 'Перейти до реєстрації';
+  authSubmit.innerText = isRegister ? 'Зареєструватися' : 'Увійти';
+}
+
+/* Update auth UI area */
+function updateAuthUI() {
+  const cu = getCurrentUser();
+  if (cu && cu.email) {
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (registerBtn) registerBtn.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = '';
+    if (authStatus) authStatus.innerText = `Ви увійшли як ${cu.name || cu.email}`;
+  } else {
+    if (loginBtn) loginBtn.style.display = '';
+    if (registerBtn) registerBtn.style.display = '';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (authStatus) authStatus.innerText = 'Ви не увійшли';
+  }
+}
 
 /**
  * ГЕНЕРАЦІЯ ЗЕРНИСТОГО ПІСКУ (ЯК НА РЕФЕРЕНСІ)
@@ -493,12 +778,27 @@ function addStone(x, y) {
   const size = Math.max(15, parseInt((brushSlider && brushSlider.value) || 30) * 0.7);
   obstacles.push({ x, y, size, type: 'stone' });
   drawObstacle(obstacles[obstacles.length - 1]);
+
+  // Додаємо відстеження події
+  posthog.capture('obstacle_placed', {
+    type: 'stone',
+    size: size,
+    x_pos: x,
+    y_pos: y
+  });
 }
 
 function addTree(x, y) {
   const size = Math.max(20, parseInt((brushSlider && brushSlider.value) || 30));
   obstacles.push({ x, y, size, type: 'tree' });
   drawObstacle(obstacles[obstacles.length - 1]);
+
+  posthog.capture('obstacle_placed', {
+    type: 'tree',
+    size: size,
+    x_pos: x,
+    y_pos: y
+  });
 }
 
 export function clearObstacles() {
@@ -511,6 +811,8 @@ export function clearObstacles() {
   lastY = 0;
   lastTime = 0;
   skipInitial = false;
+
+  posthog.capture('garden_cleared');
 
   // Перемалювати полотно, якщо є контекст
   if (typeof initSand === 'function') initSand();
@@ -577,9 +879,116 @@ if (typeof module !== 'undefined' && module.exports) {
     setTool: window.setTool,
     initDOMBindings,
     clearObstacles,
+    // auth exports
+    registerUser,
+    loginUser,
+    logoutUser,
+    getCurrentUser,
+    migrateAssignIds, // added export to avoid unused warning
   };
 }
 
 const appStatus = import.meta?.env?.VITE_APP_STATUS || 'dev';
 const statusElement = typeof document !== 'undefined' ? document.getElementById('app-status') : null;
 if (statusElement) statusElement.innerText = appStatus;
+
+
+import posthog from 'posthog-js';
+
+posthog.init('phc_2AmGqYGLTRz71IpBwJNBArZqDIOKewFQbaK4JS2w9Lg', {
+    api_host: 'https://eu.i.posthog.com',
+    person_profiles: 'identified_only'
+});
+
+posthog.onFeatureFlags(function() {
+    if (posthog.isFeatureEnabled('show-special-tool')) {
+        // Use Sentry or posthog instead of console.log to avoid lint warnings
+        Sentry?.captureMessage?.("Feature Flag 'show-special-tool' is ACTIVE!");
+
+        const injectSpecialButton = () => {
+            // Шукаємо ПЕРШУ секцію з інструментами (там, де Граблі, Каміння, Сакура)
+            const toolSections = document.querySelectorAll('.tool-section');
+            const targetSection = toolSections[0]; // [0] — це перша секція в списку
+
+            if (targetSection) {
+                if (!document.getElementById('specialToolBtn')) {
+                    const specialBtn = document.createElement('button');
+                    specialBtn.id = 'specialToolBtn';
+                    specialBtn.innerText = '✨ Золотий камінь';
+                    
+                    // Додаємо стилі, щоб кнопка виглядала як інші
+                    specialBtn.style.backgroundColor = '#ffd700';
+                    specialBtn.style.color = '#333';
+                    specialBtn.style.fontWeight = 'bold';
+                    specialBtn.style.marginTop = '8px'; // невеликий відступ зверху
+                    specialBtn.style.border = 'none';
+                    specialBtn.style.cursor = 'pointer';
+                    
+                    targetSection.appendChild(specialBtn);
+
+                    specialBtn.addEventListener('click', () => {
+                        // Використовуємо функцію setTool, яка вже є у вашому HTML (через onclick)
+                        if (typeof window.setTool === 'function') {
+                            window.setTool('stone'); // активуємо камінь
+                            // Але змінюємо колір наступного каменю на золотий у логіці (опційно)
+                        }
+                        
+                        posthog.capture('special_tool_selected', { color: 'gold' });
+                        alert('Ви активували секретний золотий інструмент!');
+                    });
+                }
+            } else {
+                // replace console.error with Sentry message
+                Sentry?.captureMessage?.("Не знайдено жодної секції .tool-section");
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', injectSpecialButton);
+        } else {
+            injectSpecialButton();
+        }
+    }
+});
+
+import * as Sentry from "@sentry/browser";
+
+Sentry.init({
+  dsn: "https://a7b847eda962f9fe418681ac3e4cd7c4@o4511088752787456.ingest.de.sentry.io/4511088756785232",
+  
+  // Вказуємо середовище (автоматично визначаємо localhost або production)
+  environment: window.location.hostname === 'localhost' ? "development" : "production",
+
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration()
+  ],
+
+  // Tracing: 1.0 означає запис 100% транзакцій для аналізу продуктивності
+  tracesSampleRate: 1.0, 
+
+  // Session Replay: у розробці краще поставити 1.0, щоб бачити всі записи сесій
+  replaysSessionSampleRate: 1.0, 
+  replaysOnErrorSampleRate: 1.0,
+
+  // Додай свій домен Vercel сюди для розподіленого трасування
+  tracePropagationTargets: ["localhost", "https://zen-garden-khaki.vercel.app"],
+});
+
+// Run once to migrate existing users without id
+function migrateAssignIds() {
+  const users = getUsers();
+  let max = users.reduce((m,u) => {
+    const n = Number(u.id);
+    return (!Number.isNaN(n) && n > m) ? n : m;
+  }, 0);
+  let changed = false;
+  for (const u of users) {
+    if (!u.id) {
+      max += 1;
+      u.id = max;
+      changed = true;
+    }
+  }
+  if (changed) saveUsers(users);
+}
