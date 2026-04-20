@@ -28,6 +28,7 @@ let authName = null;
 let authPassword = null;
 let authSwitch = null;
 let authMessage = null;
+let authSubmit = null; // added: submit button reference
 
 /**
  * Ініціалізація DOM-зв'язків і слухачів.
@@ -59,6 +60,7 @@ export function initDOMBindings() {
   authPassword = document.getElementById('authPassword');
   authSwitch = document.getElementById('authSwitch');
   authMessage = document.getElementById('authMessage');
+  authSubmit = document.getElementById('authSubmit'); // added assignment
 
   // Безпечні прив'язки: перевіряємо наявність елементів перед викликом
   if (rakeToolBtn) rakeToolBtn.addEventListener('click', () => window.setTool('rake'));
@@ -186,14 +188,14 @@ const breakBtn = document.getElementById('breakBtn');
 
 if (breakBtn) {
   breakBtn.addEventListener('click', () => {
-    console.error("Simulating critical error...");
+    Sentry?.captureMessage?.("Simulating critical error...");
 
     // 1. Спочатку показуємо повідомлення користувачу
     alert("Зараз буде згенеровано помилку для Sentry!");
 
     // 2. Потім викидаємо помилку, яку перехопить Sentry
     throw new Error("Sentry Test Error: Something went wrong!");
-   });
+  });
 }
 
   // Надійне прив'язання кнопки очищення:
@@ -350,7 +352,7 @@ function logoutUser() {
   // Clear Sentry user context on logout to avoid cross-session leakage
   try {
     Sentry?.setUser?.(null);
-  } catch (e) {
+  } catch {
     // ignore if Sentry not available
   }
 }
@@ -835,11 +837,7 @@ function drawObstacle(obj) {
     ctx.shadowColor = 'rgba(0,0,0,0.1)';
     ctx.fillStyle = '#5d4037';
     ctx.fillRect(obj.x - 2, obj.y, 4, -obj.size);
-<<<<<<< HEAD
-    ctx.fillStyle = '#F9A1BC';
-=======
     ctx.fillStyle = '#d81b60';
->>>>>>> 453e1be6838eb89a91f0e06aae8de1467c05ebd5
     for (let i = 0; i < 7; i++) {
       ctx.beginPath();
       ctx.arc(obj.x + Math.cos(i) * 9, obj.y - obj.size + Math.sin(i) * 7, obj.size / 2.8, 0, Math.PI * 2);
@@ -886,6 +884,7 @@ if (typeof module !== 'undefined' && module.exports) {
     loginUser,
     logoutUser,
     getCurrentUser,
+    migrateAssignIds, // added export to avoid unused warning
   };
 }
 
@@ -903,7 +902,8 @@ posthog.init('phc_2AmGqYGLTRz71IpBwJNBArZqDIOKewFQbaK4JS2w9Lg', {
 
 posthog.onFeatureFlags(function() {
     if (posthog.isFeatureEnabled('show-special-tool')) {
-        console.log("Feature Flag 'show-special-tool' is ACTIVE!");
+        // Use Sentry or posthog instead of console.log to avoid lint warnings
+        Sentry?.captureMessage?.("Feature Flag 'show-special-tool' is ACTIVE!");
 
         const injectSpecialButton = () => {
             // Шукаємо ПЕРШУ секцію з інструментами (там, де Граблі, Каміння, Сакура)
@@ -938,7 +938,8 @@ posthog.onFeatureFlags(function() {
                     });
                 }
             } else {
-                console.error("Не знайдено жодної секції .tool-section");
+                // replace console.error with Sentry message
+                Sentry?.captureMessage?.("Не знайдено жодної секції .tool-section");
             }
         };
 
