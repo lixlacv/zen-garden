@@ -32,16 +32,60 @@
         <section class="tool-section">
             <button id="musicBtn">Музика: Викл</button>
             <button id="clearBtn" class="danger">Очистити все</button>
+            <button id="breakBtn" style="background-color: #ff4d4d; color: white;">Break the world</button>
         </section>
 
         <audio id="bgMusic" src="assets/zen-music.mp3" loop></audio>
     </nav>
+
+    <!-- Auth controls moved out of the left panel to top-right -->
+    <div id="authControls" aria-hidden="false">
+        <button id="loginBtn">Увійти</button>
+        <button id="registerBtn">Реєстрація</button>
+        <button id="logoutBtn" style="display:none;">Вийти</button>
+        <span id="authStatus" style="margin-left:8px;color:#666;font-size:0.95em;"></span>
+    </div>
 
     <canvas id="sandCanvas"></canvas>
 
     <footer>
         <p>Status: <span id="app-status"></span></p>
     </footer>
+
+    <!-- Authentication modal (unchanged) -->
+    <div id="authModal" class="auth-modal" style="display:none;">
+        <div class="auth-modal__backdrop" id="authBackdrop"></div>
+        <div class="auth-modal__panel">
+            <button class="auth-modal__close" id="authCloseBtn" title="Close">×</button>
+            <h3 id="authTitle">Вхід</h3>
+
+            <form id="authForm">
+                <input type="hidden" id="authMode" value="login" />
+
+                <label class="auth-row">
+                    <span class="auth-label">Email</span>
+                    <input id="authEmail" type="email" required />
+                </label>
+
+                <label class="auth-row" id="nameRow" style="display:none;">
+                    <span class="auth-label">Ім'я</span>
+                    <input id="authName" type="text" />
+                </label>
+
+                <label class="auth-row">
+                    <span class="auth-label">Пароль</span>
+                    <input id="authPassword" type="password" required />
+                </label>
+
+                <div style="display:flex;gap:8px;align-items:center;margin-top:12px;">
+                    <button id="authSubmit" type="submit">Підтвердити</button>
+                    <button id="authSwitch" type="button" class="link-like">Перейти до реєстрації</button>
+                </div>
+
+                <div id="authMessage" style="margin-top:8px;color:#b00;"></div>
+            </form>
+        </div>
+    </div>
 
     <script src="script.js" type="module"></script>
 
