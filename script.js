@@ -835,7 +835,11 @@ function drawObstacle(obj) {
     ctx.shadowColor = 'rgba(0,0,0,0.1)';
     ctx.fillStyle = '#5d4037';
     ctx.fillRect(obj.x - 2, obj.y, 4, -obj.size);
+<<<<<<< HEAD
     ctx.fillStyle = '#F9A1BC';
+=======
+    ctx.fillStyle = '#d81b60';
+>>>>>>> 453e1be6838eb89a91f0e06aae8de1467c05ebd5
     for (let i = 0; i < 7; i++) {
       ctx.beginPath();
       ctx.arc(obj.x + Math.cos(i) * 9, obj.y - obj.size + Math.sin(i) * 7, obj.size / 2.8, 0, Math.PI * 2);
