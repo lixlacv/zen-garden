@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:coverage": "jest --coverage",
     "cypress:open": "cypress open",
-    "cypress:run": "cypress run"
+    "cypress:run": "cypress run"  
+
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -33,6 +34,8 @@
   },
   "dependencies": {
     "@sentry/browser": "^10.45.0",
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^3.0.5",
     "posthog-js": "^1.363.1"
   }
 }
