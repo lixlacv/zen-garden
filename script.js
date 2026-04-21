@@ -896,8 +896,14 @@ if (statusElement) statusElement.innerText = appStatus;
 import posthog from 'posthog-js';
 
 posthog.init('phc_2AmGqYGLTRz71IpBwJNBArZqDIOKewFQbaK4JS2w9Lg', {
-    api_host: 'https://eu.i.posthog.com',
-    person_profiles: 'identified_only'
+    // Замість прямого посилання на EU сервер, використовуємо наш проксі
+    api_host: window.location.origin + '/ingest',
+    
+    // Ваші оригінальні налаштування
+    person_profiles: 'identified_only',
+    
+    // UI host залишаємо оригінальний для коректних посилань в адмінці
+    ui_host: 'https://eu.posthog.com'
 });
 
 posthog.onFeatureFlags(function() {
